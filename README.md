@@ -13,6 +13,7 @@
 1. Clone repository
 2. Run `docker compose up -d` to start MongoDB
 3. Run `npm i` to install dependencies
+4. Copy `.env.example` to `.env` and update if needed
 4. Run `npm run gen-routes` to generate swagger and routes
 5. Run `npm run dev` to launch server
 
