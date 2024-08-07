@@ -1,0 +1,22 @@
+{
+    "entryFile": "src/index.ts",
+    "noImplicitAdditionalProperties": "throw-on-extras",
+    "controllerPathGlobs": ["src/controllers/**/*.ts"],
+    "spec": {
+      "outputDirectory": "public",
+      "specVersion": 3,
+      "basePath": "/api",
+      "schemes": ["http", "https"],
+      "securityDefinitions": {
+        "apiKeyAuth": {
+          "type": "apiKey",
+          "name": "Authorization",
+          "in": "header"
+        }
+      }
+    },
+    "routes": {
+      "routesDir": "src/routes",
+      "basePath": "/api"
+    }
+  }

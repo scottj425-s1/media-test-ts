@@ -1,0 +1,46 @@
+{
+  "name": "image-server",
+  "version": "1.0.0",
+  "description": "restful image server",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "tsc",
+    "dev": "nodemon",
+    "gen-routes": "tsoa spec-and-routes"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.5.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "swagger-ui-express": "^5.0.1",
+    "tsoa": "^6.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.8.0",
+    "@types/eslint__js": "^8.42.3",
+    "@types/express": "^4.17.21",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^22.1.0",
+    "@types/swagger-ui-express": "^4.1.6",
+    "concurrently": "^8.2.2",
+    "eslint": "^9.8.0",
+    "nodemon": "^3.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.1"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "ts",
+    "exec": "ts-node src/index.ts"
+  }
+}
