@@ -55,13 +55,32 @@ export default class AvatarService {
     /**
      * Generates a thumbnail URL for the given file.
      * @param file The file containing the image data for the new avatar.
+     * @param pixelSize The desired size of the thumbnail (default: 64).
      * @returns A Buffer of the thumbnail image.
      */
-    async generateThumbnail(file: File, pixelSize: number = 64): Promise<Buffer> {
-        const circleMask = Buffer.from(`<svg><circle cx="${pixelSize / 2}" cy="${pixelSize / 2}" r="${pixelSize / 2}"/></svg>`);
-        return await sharp(file.buffer)
-        .resize(pixelSize, pixelSize)
+    async generateThumbnail(file: File, pixelSize: number = 128, borderColor: "#D90040", borderWidthPixels: number = 4): Promise<Buffer> {
+        const innerSize = pixelSize - 2 * borderWidthPixels;
+        const circleMask = Buffer.from(`<svg width="${innerSize}" height="${innerSize}"><circle cx="${innerSize / 2}" cy="${innerSize / 2}" r="${innerSize / 2}" /></svg>`);
+        const ringMask = Buffer.from(
+            `<svg width="${pixelSize}" height="${pixelSize}">
+                <circle cx="${pixelSize / 2}" cy="${pixelSize / 2}" r="${innerSize / 2}" fill="none" stroke="${borderColor}" stroke-width="${borderWidthPixels}" />
+            </svg>`
+        );
+        const avatarImageBuffer: Buffer = await sharp(file.buffer)
+        .resize(innerSize, innerSize)
         .composite([{ input: circleMask, blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+
+        return await sharp({
+            create: {
+                width: pixelSize,
+                height: pixelSize,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
+            }
+        })
+        .composite([{ input: avatarImageBuffer, top: borderWidthPixels, left: borderWidthPixels }, { input: ringMask, blend: 'over' }])
         .png()
         .toBuffer();
     }
