@@ -1,6 +1,9 @@
 import IAvatar from "../interfaces/avatar.interface";
 import Avatar from "../models/avatar.model";
 import { File } from "tsoa";
+import { uploadFileToS3 } from "../providers/s3.provider";
+import sharp from "sharp";
+import dayjs from "dayjs";
 
 export default class AvatarService {
     /**
@@ -24,11 +27,8 @@ export default class AvatarService {
     async createAvatar(accountId: string, file: File): Promise<IAvatar> {
         const existingAvatar = await Avatar.findOne({ accountId });
         if (existingAvatar) throw new Error('Avatar already exists');
-        const avatar = new Avatar();
-        avatar.accountId = accountId;
-        avatar.imageUrl = `https://example.com/image-${file.filename}`;
-        avatar.thumbnailUrl = this.generateThumbnail(file);
-        return (await avatar.save()).toJSON();
+        
+        return this.saveAvatar(accountId, file, new Avatar());
     }
 
     /**
@@ -40,10 +40,7 @@ export default class AvatarService {
     async updateAvatar(accountId: string, file: File): Promise<IAvatar | null> {
         const avatar = await Avatar.findOne({ accountId });
         if (!avatar) return null;
-        avatar.imageUrl = `https://example.com/image-${file.originalname}`;
-        avatar.thumbnailUrl = this.generateThumbnail(file);
-        avatar.updatedAt = new Date();
-        return (await avatar.save()).toJSON();
+        return this.saveAvatar(accountId, file, avatar);
     }
 
     /**
@@ -58,9 +55,67 @@ export default class AvatarService {
     /**
      * Generates a thumbnail URL for the given file.
      * @param file The file containing the image data for the new avatar.
-     * @returns A URL representing the thumbnail image.
+     * @returns A Buffer of the thumbnail image.
      */
-    generateThumbnail(file: File): string {
-        return `https://example.com/thumbnail-${file.originalname}`;
+    async generateThumbnail(file: File, pixelSize: number = 64): Promise<Buffer> {
+        const circleMask = Buffer.from(`<svg><circle cx="${pixelSize / 2}" cy="${pixelSize / 2}" r="${pixelSize / 2}"/></svg>`);
+        return await sharp(file.buffer)
+        .resize(pixelSize, pixelSize)
+        .composite([{ input: circleMask, blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+    }
+
+    /**
+     * Helper function to save an avatar (create or update).
+     * @param accountId The unique identifier of the account to which the avatar belongs.
+     * @param file The file containing the image data for the avatar.
+     * @param avatar The avatar instance to be saved.
+     * @returns The saved avatar object.
+     */
+    private async saveAvatar(accountId: string, file: File, avatar: InstanceType<typeof Avatar>): Promise<IAvatar> {
+        const thumbnail: Buffer = await this.generateThumbnail(file);
+        const locations = await this.uploadAvatarToS3(accountId, file, thumbnail);
+        avatar.accountId = accountId;
+        avatar.imageUrl = locations.location;
+        avatar.thumbnailUrl = locations.thumbnailLocation;
+        avatar.updatedAt = new Date();
+        return (await avatar.save()).toJSON();
+    }
+
+    /**
+     * Helper function to get file extension.
+     * @param filename The file name to parse.
+     * @returns The file extension or empty string.
+     */
+    private getFileExtension(filename: string): string {
+        return filename.split('.').pop() || '';
+    }
+
+    /**
+     * Helper function to generate thumbnail file name.
+     * @param accountId The unique identifier of the account to which the avatar belongs.
+     * @param date The date for which the thumbnail file name should be generated.
+     * @returns The thumbnail file name.
+     */
+    private generateThubmnailFileName(accountId: string, date: Date = new Date()): string {
+        const dateString = dayjs(date).format('YYYY.MM.DD.HH.mm.ss');
+        return `${dateString}__${accountId}.png`;
+    }
+
+    /**
+     * Helper function to upload avatar and thumbnail to S3.
+     * @param accountId The unique identifier of the account to which the avatar belongs.
+     * @param file The file containing the image data for the avatar.
+     * @param thumbnail The thumbnail image data.
+     */
+    private async uploadAvatarToS3(accountId: string, file: File, thumbnail: Buffer): Promise<{ location: string; thumbnailLocation: string; }> {
+        const avatarBucket = process.env.AWS_MEDIA_BUCKET || '';
+        const avatarKey = process.env.AWS_AVATAR_KEY || '';
+        const fileExtension = this.getFileExtension(file.originalname);
+        const thumnailName = this.generateThubmnailFileName(accountId);
+        const location = await uploadFileToS3(avatarBucket, file.buffer, `${avatarKey}/${accountId}.${fileExtension}`) as string;
+        const thumbnailLocation = await uploadFileToS3(avatarBucket, thumbnail, `${avatarKey}/${thumnailName}`) as string;
+        return { location, thumbnailLocation };
     }
 }
