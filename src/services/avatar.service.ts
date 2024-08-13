@@ -58,7 +58,7 @@ export default class AvatarService {
      * @param pixelSize The desired size of the thumbnail (default: 64).
      * @returns A Buffer of the thumbnail image.
      */
-    async generateThumbnail(file: File, pixelSize: number = 128, borderColor: "#D90040", borderWidthPixels: number = 4): Promise<Buffer> {
+    async generateThumbnail(file: File, pixelSize: number = 64, borderColor: "#D90040", borderWidthPixels: number = 4): Promise<Buffer> {
         const innerSize = pixelSize - 2 * borderWidthPixels;
         const circleMask = Buffer.from(`<svg width="${innerSize}" height="${innerSize}"><circle cx="${innerSize / 2}" cy="${innerSize / 2}" r="${innerSize / 2}" /></svg>`);
         const ringMask = Buffer.from(
